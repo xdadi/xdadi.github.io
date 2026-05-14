@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preload" href="./2021_bmw_m5_competition.glb" as="fetch" crossorigin="anonymous">
+    <link rel="dns-prefetch" href="https://ajax.googleapis.com">
+    <style>
+        @font-face {
+            font-family: 'BebasNeue';
+            src: url('./BebasNeue-Regular.ttf') format('truetype');
+        }
+        
+        * {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #ffffff;
+        }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1 {
+            display: none;
+        }
+        
+        .nav-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #000000;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+        
+        .nav-bar a {
+            padding: 12px 28px;
+            background: #1a1a1a;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            border: 2px solid #333333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: none;
+        }
+        
+        .nav-bar a:hover {
+            background: #2a2a2a;
+            border-color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .nav-bar a.active {
+            background: #000000;
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            background: #f5f5f5;
+            overflow: hidden;
+            min-height: 300px;
+        }
+        
+        .background-text {
+            position: absolute;
+            top: 50%;
+            left: 55%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(6rem, 20vw, 28em);
+            font-weight: bold;
+            color: rgb(255, 0, 0);
+            font-family: 'BebasNeue', sans-serif;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+            transition: transform 0.1s ease-out;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+        
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            background: transparent !important;
+            --background-image: none;
+        }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: clamp(20px, 5vw, 40px);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 40%, rgba(255, 255, 255, 1) 100%);
+            z-index: 5;
+            max-height: 35%;
+            overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.6s ease-out;
+        }
+        
+        .info-panel.visible {
+            opacity: 1;
+        }
+        
+        .info-panel p {
+            margin: 0;
+            font-size: clamp(0.85rem, 2vw, 1.1rem);
+            line-height: 1.6;
+            color: #1a1a1a;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Mobile (phones) - max 768px */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            
+            .nav-bar {
+                padding: 12px 10px;
+                gap: 8px;
+            }
+            
+            .nav-bar a {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+            
+            .background-text {
+                font-size: clamp(3rem, 16vw, 10rem);
+                letter-spacing: 1px;
+            }
+            
+            model-viewer {
+                --ar-status: hidden;
+            }
+        }
+        
+        /* Tablets - 768px to 1024px */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .background-text {
+                font-size: clamp(8rem, 18vw, 20rem);
+            }
+        }
+        
+        /* Large Screens (Teachmint X2 Plus 75" & Desktop) - 1025px+ */
+        @media (min-width: 1025px) {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                border-radius: 0;
+            }
+            
+            .background-text {
+                font-size: clamp(10rem, 22vw, 28em);
+            }
+        }
+        
+        /* Ultra-wide screens (Teachmint with extended viewport) */
+        @media (min-width: 2560px) {
+            .background-text {
+                font-size: clamp(16rem, 24vw, 35em);
+            }
+        }
+        
+        /* Landscape orientation optimization */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .background-text {
+                font-size: clamp(4rem, 24vw, 15rem);
+            }
+        }
+        
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            model-viewer {
+                touch-action: manipulation;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="index.html" class="active">BMW M5</a>
+        <a href="mercedes.html">Mercedes CLS 63</a>
+    </div>
+    
+    <h1></h1>
+    
+    <div class="container">
+        <div class="background-text" id="backgroundText">BMW M5</div>
+        
+        <!-- Use it like an HTML element -->
+        <model-viewer 
+            id="modelViewer"
+            src="./2021_bmw_m5_competition.glb" 
+            alt="2021 BMW M5 Competition" 
+            auto-rotate 
+            camera-controls 
+            shadow-intensity="0.4"
+            exposure="1"
+            tone-mapping="commerce"
+            ar>
+        </model-viewer>
+        
+        <div class="info-panel" id="infoPanelBMW">
+            <p>The BMW M5 is the high-performance benchmark of the luxury sports sedan world, famously blending executive-class comfort with supercar levels of speed. Since its debut in 1984, it has evolved from a hand-built boutique sleeper into a technical powerhouse, with the newest BMW M5 Sedan introducing a hybrid powertrain that produces over 700 horsepower. Known for its "wolf in sheep's clothing" persona, the M5 features advanced M xDrive all-wheel-drive systems, track-tuned suspension, and a cockpit filled with premium materials and cutting-edge tech. Whether it's the legendary naturally aspirated V10 of the past or the electrified V8 of today, the M5 remains a top choice for drivers who refuse to compromise between family-sized practicality and raw, visceral performance.</p>
+        </div>
+    </div>
+
+    <script>
+        // Device detection
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        const isTablet = window.matchMedia("(min-width: 769px) and (max-width: 1024px)").matches;
+        const isLargeScreen = window.matchMedia("(min-width: 1025px)").matches;
+        const isTouchDevice = () => {
+            return (('ontouchstart' in window) ||
+                    (navigator.maxTouchPoints > 0) ||
+                    (navigator.msMaxTouchPoints > 0));
+        };
+        
+        const modelViewer = document.getElementById('modelViewer');
+        const backgroundText = document.getElementById('backgroundText');
+        
+        // Disable AR on mobile for better compatibility and performance
+        if (isMobile && modelViewer.hasAttribute('ar')) {
+            modelViewer.removeAttribute('ar');
+        }
+        
+        // Track camera movement and rotation for animation with throttling
+        let lastCameraUpdate = 0;
+        const cameraUpdateInterval = isMobile ? 100 : 50;
+        
+        modelViewer.addEventListener('camera-change', () => {
+            const now = Date.now();
+            if (now - lastCameraUpdate < cameraUpdateInterval) return;
+            lastCameraUpdate = now;
+            
+            const camera = modelViewer.camera;
+            const position = camera.position;
+            
+            // Calculate offset based on camera position for more pronounced movement
+            const offsetX = (position.x / 5) || 0;
+            const offsetY = (position.y / 5) || 0;
+            
+            // Calculate rotation based on camera orbit
+            const rotationX = (position.y / 100) * 5 || 0;
+            const rotationZ = (position.x / 100) * 5 || 0;
+            
+            // Apply transform to text for tracking effect with rotation and scale
+            backgroundText.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) rotateX(${rotationX}deg) rotateZ(${rotationZ}deg) scale(1.1)`;
+        });
+        
+        // Arrow key controls for desktop
+        let cameraControls = modelViewer.cameraControls;
+        const keySpeed = 0.05;
+        
+        document.addEventListener('keydown', (e) => {
+            if (!cameraControls) return;
+            
+            const theta = modelViewer.getCameraOrbit().theta;
+            const phi = modelViewer.getCameraOrbit().phi;
+            const radius = modelViewer.getCameraOrbit().radius;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    modelViewer.cameraOrbit = `${theta}rad ${Math.max(phi - keySpeed, 0)}rad ${radius}m`;
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    modelViewer.cameraOrbit = `${theta}rad ${Math.min(phi + keySpeed, Math.PI)}rad ${radius}m`;
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    modelViewer.cameraOrbit = `${theta - keySpeed}rad ${phi}rad ${radius}m`;
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    modelViewer.cameraOrbit = `${theta + keySpeed}rad ${phi}rad ${radius}m`;
+                    break;
+            }
+        });
+        
+        // Touch controls for mobile (swipe gestures)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isSwiping = false;
+        
+        modelViewer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = true;
+        }, { passive: true });
+        
+        modelViewer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && isSwiping) {
+                const touchEndX = e.touches[0].clientX;
+                const touchEndY = e.touches[0].clientY;
+                
+                const deltaX = touchStartX - touchEndX;
+                const deltaY = touchStartY - touchEndY;
+                
+                const theta = modelViewer.getCameraOrbit().theta;
+                const phi = modelViewer.getCameraOrbit().phi;
+                const radius = modelViewer.getCameraOrbit().radius;
+                
+                // Adjust sensitivity based on device type
+                let touchSensitivity = 0.005;
+                if (isLargeScreen) {
+                    touchSensitivity = 0.008; // Higher sensitivity for large panels
+                } else if (isMobile) {
+                    touchSensitivity = 0.003; // Lower sensitivity for small screens
+                }
+                
+                const newTheta = theta + deltaX * touchSensitivity;
+                const newPhi = Math.max(0, Math.min(phi + deltaY * touchSensitivity, Math.PI));
+                
+                modelViewer.cameraOrbit = `${newTheta}rad ${newPhi}rad ${radius}m`;
+                
+                touchStartX = touchEndX;
+                touchStartY = touchEndY;
+            }
+        }, { passive: true });
+        
+        modelViewer.addEventListener('touchend', () => {
+            isSwiping = false;
+        }, { passive: true });
+        
+        // Two-finger pinch zoom for touch devices (Teachmint & tablets)
+        let lastDistance = 0;
+        
+        modelViewer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (lastDistance > 0) {
+                    const zoomSpeed = 0.05;
+                    const radius = modelViewer.getCameraOrbit().radius;
+                    const newRadius = radius * (1 + (lastDistance - distance) * zoomSpeed / 100);
+                    
+                    // Clamp zoom distance
+                    const clampedRadius = Math.max(0.5, Math.min(newRadius, 100));
+                    const theta = modelViewer.getCameraOrbit().theta;
+                    const phi = modelViewer.getCameraOrbit().phi;
+                    
+                    modelViewer.cameraOrbit = `${theta}rad ${phi}rad ${clampedRadius}m`;
+                }
+                lastDistance = distance;
+            }
+        }, { passive: true });
+        
+        modelViewer.addEventListener('touchend', () => {
+            lastDistance = 0;
+        }, { passive: true });
+        
+        // Prevent context menu on touch devices
+        if (isTouchDevice()) {
+            modelViewer.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+        }
+        
+        // Detect large display for Teachmint X2 Plus
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
+        const isDKiosk = (screenWidth >= 3840 || screenHeight >= 2160) || 
+                        (screenWidth >= 1920 && screenHeight >= 1080 && isLargeScreen);
+        
+        // Handle auto-rotate animation and visibility
+        modelViewer.addEventListener('model-visibility', () => {
+            console.log('Model loaded and visible');
+        });
+        
+        // Optimize performance on load
+        window.addEventListener('load', () => {
+            // Enable shadow intensity based on device
+            if (isMobile) {
+                modelViewer.setAttribute('shadow-intensity', '0.2');
+            } else if (isDKiosk) {
+                modelViewer.setAttribute('shadow-intensity', '1.2');
+            }
+        });
+        
+        // Handle window resize for responsive adjustments
+        window.addEventListener('resize', () => {
+            // Responsive adjustments can be added here
+        });
+    </script>
+    
+    <!-- Lazy load model-viewer library asynchronously -->
+    <script>
+        // Load model-viewer library after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadModelViewer);
+        } else {
+            loadModelViewer();
+        }
+        
+        function loadModelViewer() {
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js';
+            script.async = true;
+            document.body.appendChild(script);
+        }
+    </script>
+    
+
+    <script>
+        const faders = document.querySelectorAll('.fade-in');
+
+        const appearOptions = {
+            threshold: 0.3, // Triggers when 30% of the element is visible
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const appearOnScroll = new IntersectionObserver(function(entries, appearOnScroll) {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) {
+                    return;
+                } else {
+                    entry.target.classList.add('appear');
+                    appearOnScroll.unobserve(entry.target);
+                }
+            });
+        }, appearOptions);
+
+        faders.forEach(fader => {
+            appearOnScroll.observe(fader);
+        });
+    </script>
+    <!-- Add to your <head> for the Inter font -->
+<link href="https://googleapis.com" rel="stylesheet">
+
+<style>
+  /* The class that controls the starting state and the animation */
+  .m5-paragraph {
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    color: #333; /* Change to #fff if your background is dark */
+    
+    /* Animation Start State */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s ease-out, transform 1s ease-out;
+  }
+
+  /* The class added by JavaScript when scrolling */
+  .m5-paragraph.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+  
+<!-- 1. Google Font (Inter) -->
+<link href="https://googleapis.com" rel="stylesheet">
+
+<style>
+  .m5-paragraph-bold {
+    /* Font Styling */
+    font-family: 'Inter', sans-serif;
+    font-weight: 700; /* This makes it bold */
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: #fff; /* White text looks great for BMW themes */
+    
+    /* Scroll Fade Animation Start */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+  }
+
+  /* State when scrolled into view */
+  .m5-paragraph-bold.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+<!-- Add to your <head> for the Inter font -->
+<link href="https://googleapis.com" rel="stylesheet">
+
+<style>
+  /* The class that controls the starting state and the animation */
+  .m5-paragraph {
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    color: #333; /* Change to #fff if your background is dark */
+    
+    /* Animation Start State */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s ease-out, transform 1s ease-out;
+  }
+
+  /* The class added by JavaScript when scrolling */
+  .m5-paragraph.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+
+<!-- The Paragraph -->
+<p class="m5-paragraph" id="m5-text"><b>
+  The BMW M5 is the high-performance benchmark of the luxury sports sedan world, famously blending executive-class comfort with supercar levels of speed. Since its debut in 1984, it has evolved from a hand-built boutique sleeper into a technical powerhouse, with the newest BMW M5 Sedan introducing a hybrid powertrain that produces over 700 horsepower. Known for its "wolf in sheep’s clothing" persona, the M5 features advanced M xDrive all-wheel-drive systems, track-tuned suspension, and a cockpit filled with premium materials and cutting-edge tech. Whether it's the legendary naturally aspirated V10 of the past or the electrified V8 of today, the M5 remains a top choice for drivers who refuse to compromise between family-sized practicality and raw, visceral performance.
+  
+</p>
+
+<script>
+  // Simple script to trigger the fade when the paragraph is scrolled into view
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  observer.observe(document.getElementById('m5-text'));
+</script>
+
+</body>
+</html>
