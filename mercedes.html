@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer | Mercedes CLS 63</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        @font-face {
+            font-family: 'BebasNeue';
+            src: url('./BebasNeue-Regular.ttf') format('truetype');
+            font-display: swap;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #ffffff;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        .nav-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            background: #000;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        
+        .nav-bar a {
+            padding: 10px 25px;
+            background: #1a1a1a;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 2px solid #333;
+            transition: 0.3s;
+        }
+
+        .nav-bar a.active { border-color: #fff; }
+        
+        .container {
+            position: relative;
+            flex: 1;
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .background-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(5rem, 15vw, 20rem);
+            font-weight: bold;
+            color: #080808;
+            font-family: 'BebasNeue', sans-serif;
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            user-select: none;
+        }
+        
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            --poster-color: transparent;
+        }
+
+        #lazy-load-poster {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #999;
+            z-index: 1;
+        }
+        
+        .cls-paragraph {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(30px);
+            width: 90%;
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 20;
+            opacity: 0;
+            transition: 1s ease-out;
+            line-height: 1.6;
+            font-family: 'Inter', sans-serif;
+            pointer-events: auto;
+        }
+
+        .cls-paragraph.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-bar">
+        <a href="index.html">BMW M5</a>
+        <a href="mercedes.html" class="active">Mercedes CLS</a>
+          <a href="bugatti.html" class="active">Bugatti Chiron</a>
+        
+    </nav>
+    
+    <main class="container">
+        <!-- Parallax Background Text -->
+        <div class="background-text" id="backgroundText">MERCEDES CLS</div>
+        
+        <!-- 3D Model Viewer -->
+        <model-viewer 
+            id="modelViewer"
+            src="./mersedes_cls_63__www.vecarz.com.glb" 
+            alt="Mercedes CLS 63" 
+            auto-rotate 
+            camera-controls 
+            shadow-intensity="1" 
+            environment-image="neutral"
+            exposure="1"
+            interaction-prompt="none"
+            ar>
+            <div slot="poster" id="lazy-load-poster">LOADING MERCEDES 3D MODEL...</div>
+        </model-viewer>
+        
+        <!-- Description Text -->
+        <div class="cls-paragraph" id="cls-text">
+            <b>The Mercedes-Benz CLS</b> redefined modern automotive design as the pioneer of the four-door coupe, seamlessly merging the elegance of a coupe with the functionality of a luxury sedan. Whether powered by a smooth inline-six or the aggressive performance of an AMG variant, the CLS remains a statement of pure aesthetic ambition and technological innovation.
+        </div>
+    </main>
+
+    <!-- Load Model Viewer Library -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+    <script>
+        const modelViewer = document.getElementById('modelViewer');
+        const backgroundText = document.getElementById('backgroundText');
+        const clsText = document.getElementById('cls-text');
+
+        // 1. Parallax Effect for Background Text
+        modelViewer.addEventListener('camera-change', () => {
+            const orbit = modelViewer.getCameraOrbit();
+            // Convert theta to degrees for easier calculation
+            const thetaDegrees = orbit.theta * (180 / Math.PI);
+            // Move text horizontally based on orbit
+            backgroundText.style.left = `calc(50% + ${thetaDegrees * 0.3}px)`;
+        });
+
+        // 2. Error Handling (In case file is missing)
+        modelViewer.addEventListener('error', (error) => {
+            console.error("Model failed to load:", error);
+            document.getElementById('lazy-load-poster').innerText = "ERROR: Model file not found";
+        });
+
+        // 3. Fade-in animation for the text box
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                clsText.classList.add('visible');
+            }, 600);
+        });
+    </script>
+    
+</body>
+</html>
